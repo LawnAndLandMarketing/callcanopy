@@ -1,36 +1,43 @@
 # CallCanopy — Call Intelligence Platform
 
-> A beautiful, self-hosted call grading dashboard for lawn care and home services businesses. Connects to GoHighLevel via webhooks to automatically grade, categorize, and analyze every inbound call.
+> AI-powered call grading and intelligence dashboard for lawn care and home services businesses. Connects to GoHighLevel via webhooks — every call automatically graded, categorized, and analyzed. No Deepgram, no OAuth complexity. Just GHL → n8n → Claude → dashboard.
 
-![Signal Dashboard](https://canopy.groundcontrol.agency/)
-
-## What It Does
-
-CallCanopy turns raw call transcripts from GoHighLevel into actionable intelligence. Every call gets automatically:
-
-- **Graded A–F** based on how well it was handled
-- **Categorized** as Lead, Existing Client, Bad Lead, Spam, Tire Kicker, or Wrong Number
-- **Scored** across 5 dimensions: Answered, Qualified, Appointment Booked, Follow-Up Promised, Professional Tone
-- **Flagged** if it's a Missed Opportunity (real lead that got a D or F grade)
-
-## Live Demo
-
-👉 **[https://canopy.groundcontrol.agency/](https://canopy.groundcontrol.agency/)**
-
-Loaded with 25 realistic sample calls. Click any row to expand the full transcript, score breakdown, and key phrases.
+**Live Dashboard:** [https://canopy.groundcontrol.agency](https://canopy.groundcontrol.agency)  
+**GitHub:** [https://github.com/LawnAndLandMarketing/callcanopy](https://github.com/LawnAndLandMarketing/callcanopy)
 
 ---
 
-## Features
+## What It Does
 
-- 📊 **KPI Cards** — Total calls, leads captured, grade distribution, missed opportunities, avg duration
-- 🍩 **Grade Donut Chart** — Visual A/B/C/D/F breakdown with warm color coding
-- 📈 **14-Day Volume Chart** — Area chart showing call trends
-- 📋 **Sortable/Filterable Table** — Filter by grade, category, missed opportunity; search by name or phone
-- 🔍 **Expandable Call Rows** — Full transcript, AI summary, score breakdown, key phrases
-- ⚡ **Webhook Simulator** — Test button injects realistic calls without needing GHL connected
-- 📥 **CSV Export** — One-click export of filtered data
-- 💾 **localStorage Persistence** — Data survives page refreshes
+Every call that comes through GoHighLevel gets automatically:
+
+- **Graded A–F** — how well the call was handled by the rep
+- **Categorized** — Lead, Existing Client, Bad Lead, Spam, Tire Kicker, Wrong Number, or Missed Call
+- **Scored** across 5 dimensions: Answered, Qualified, Appointment Booked, Follow-Up Promised, Professional Tone
+- **Deep intelligence extracted** — services mentioned, objections raised (+ how handled), questions asked, competitor mentions, compliments given
+- **Flagged** — Missed Opportunity (real lead that got a D or F)
+
+Missed calls are tracked separately via a second GHL workflow — no transcript needed, just logs that the call went unanswered.
+
+---
+
+## Architecture
+
+```
+Call ends in GHL (or goes unanswered)
+    ↓
+Transcript Generated trigger  ──OR──  Missed Call trigger
+    ↓                                        ↓
+Webhook → n8n                         Webhook → n8n
+    ↓
+Claude Haiku grades transcript
+    ↓
+Structured call record built
+    ↓
+Dashboard updated (canopy.groundcontrol.agency)
+```
+
+**No Deepgram needed.** GHL now provides call transcripts natively via the Transcript Generated trigger. This replaces the previous architecture that required Deepgram nova-2 for transcription.
 
 ---
 
@@ -38,86 +45,92 @@ Loaded with 25 realistic sample calls. Click any row to expand the full transcri
 
 | Layer | Tech |
 |-------|------|
-| Frontend | Vanilla HTML/CSS/JS (zero dependencies, zero build step) |
-| Data ingestion | GoHighLevel → GHL Workflow → Webhook → n8n |
-| AI grading | n8n + Claude/GPT (grades each transcript via API) |
-| Deployment | Any static file host (SiteGround, Vercel, Netlify, S3) |
+| Dashboard | Vanilla HTML/CSS/JS — zero dependencies, zero build step |
+| Automation | n8n (lawnandlandmarketing.app.n8n.cloud) |
+| AI Grading | Anthropic Claude Haiku (claude-haiku-3-20240307) |
+| Hosting | Vercel via lawnlab.dev (canopy.groundcontrol.agency) |
+| CRM Source | GoHighLevel (Service Area Expert sub-accounts) |
 
 ---
 
-## How It Works
+## n8n Workflows
 
-```
-Call ends in GHL
-    ↓
-Transcript Generated trigger fires
-    ↓
-GHL Workflow webhooks transcript to n8n
-    ↓
-n8n sends transcript to Claude/GPT with grading prompt
-    ↓
-AI returns grade, category, scores, key phrases
-    ↓
-n8n POSTs structured data to Signal dashboard endpoint
-    ↓
-Dashboard updates in real time
-```
+Two active workflows in n8n:
+
+### 1. CallCanopy — Call Grading (Transcript Generated)
+**Webhook:** `https://lawnandlandmarketing.app.n8n.cloud/webhook/callcanopy-call-graded`
+
+Flow:
+1. Receive GHL webhook
+2. Immediately respond 200 to GHL (prevents timeout)
+3. Extract fields from payload
+4. Send transcript to Claude Haiku with grading prompt
+5. Build structured call record
+6. Store to data layer
+
+### 2. CallCanopy — Missed Call Logger
+**Webhook:** `https://lawnandlandmarketing.app.n8n.cloud/webhook/callcanopy-missed-call`
+
+Flow:
+1. Receive GHL missed call webhook
+2. Log as `missedCall: true`, grade `-`, category `Missed Call`
+3. Store to data layer
 
 ---
 
-## Setup Guide
+## GHL Setup
 
-### 1. Deploy the Dashboard
+### Workflow 1 — Transcript Generated
 
-**Option A — Drop a file anywhere:**
-```bash
-# Just upload index.html to any web server
-scp index.html user@yourserver:/var/www/callcanopy/index.html
+1. **Automation → Workflows → Create New**
+2. Trigger: **Transcript Generated**
+3. Filter: Call Duration > 10 seconds, Direction = Inbound
+4. Action: **Webhook → POST** to `callcanopy-call-graded` URL
+5. Custom data fields:
+
+| Key | Value |
+|-----|-------|
+| `contactName` | `{{contact.name}}` |
+| `contactPhone` | `{{contact.phone}}` |
+| `contactId` | `{{contact.id}}` |
+| `transcript` | `{{transcript_generated.call_transcript}}` |
+
+Note: `locationId` is hardcoded in n8n per sub-account. `{{location.id}}` is not available as a GHL merge field.
+
+### Workflow 2 — Missed Call
+
+1. Trigger: **Call Status → Missed**
+2. Action: **Webhook → POST** to `callcanopy-missed-call` URL
+3. Custom data fields:
+
+| Key | Value |
+|-----|-------|
+| `contactName` | `{{contact.name}}` |
+| `contactPhone` | `{{contact.phone}}` |
+| `contactId` | `{{contact.id}}` |
+
+---
+
+## AI Grading Prompt
+
+Used in n8n via Claude Haiku API:
+
 ```
+You are a call quality analyst for a lawn care marketing agency. Analyze this transcript 
+and return ONLY valid JSON with these exact keys:
 
-**Option B — SiteGround (SAE pattern):**
-```bash
-ssh -i ~/.ssh/your_key -p 18765 user@yourhost \
-  "mkdir -p ~/www/yourdomain.com/public_html/signal"
-scp -i ~/.ssh/your_key -P 18765 index.html \
-  user@yourhost:~/www/yourdomain.com/public_html/callcanopy/index.html
-```
-
-### 2. Configure GoHighLevel
-
-1. Go to **Automation → Workflows** in your GHL sub-account
-2. Create a new workflow → **Start from Scratch**
-3. Add trigger: **Transcript Generated**
-4. Enable filters:
-   - Call Direction: `Inbound`
-   - Call Duration: Greater than `10` seconds (filters out hang-ups)
-5. Add action: **Webhook**
-   - Method: `POST`
-   - URL: `https://your-n8n-instance.com/webhook/call-graded`
-   - Body: Include `{{full transcript}}`, `{{contact.id}}`, `{{contact.name}}`, `{{contact.phone}}`, `{{call.duration}}`, `{{call.type}}`
-
-### 3. Set Up n8n Workflow
-
-Import the n8n workflow (coming soon — `n8n/call-grading-workflow.json`).
-
-The workflow:
-1. Receives the webhook from GHL
-2. Sends transcript to Claude/GPT with the grading prompt below
-3. Parses the AI response
-4. POSTs structured call data to your dashboard
-
-**AI Grading Prompt:**
-```
-You are a call quality analyst for a lawn care marketing agency.
-
-Analyze this call transcript and return a JSON object with:
 - grade: "A" | "B" | "C" | "D" | "F"
 - category: "Lead" | "Existing Client" | "Bad Lead" | "Spam" | "Tire Kicker" | "Wrong Number"
 - sentiment: "Positive" | "Neutral" | "Negative"
-- score: { answered: bool, qualified: bool, appointmentBooked: bool, followUpPromised: bool, professionalTone: bool }
-- keyPhrases: string[] (up to 5 notable phrases from the call)
-- summary: string (1-2 sentence summary)
-- missedOpportunity: bool (true if category=Lead AND grade=D or F)
+- missedOpportunity: bool (true ONLY if category=Lead AND grade=D or F)
+- summary: string (1-2 sentences)
+- keyPhrases: string[]
+- score: { answered, qualified, appointmentBooked, followUpPromised, professionalTone } (all bool)
+- services: string[]
+- objections: [{ content, category (price/timing/trust/other), response }]
+- questions: string[]
+- competitors: string[]
+- compliments: string[]
 
 Grading rubric:
 A = Lead identified, qualified, appointment booked or strong follow-up
@@ -125,16 +138,7 @@ B = Lead qualified, follow-up promised, professional handling
 C = Adequate — call handled but no clear next step
 D = Poor handling — lead likely lost due to agent behavior
 F = Call mishandled, rude, or opportunity completely missed
-
-Transcript:
-{{transcript}}
-
-Return ONLY valid JSON, no explanation.
 ```
-
-### 4. Wire Up Live Data
-
-The dashboard accepts POST requests to update its data. Since it's a static HTML file, live data is stored in `localStorage`. For production use with real-time multi-user updates, see [Production Setup](#production-setup) below.
 
 ---
 
@@ -142,17 +146,24 @@ The dashboard accepts POST requests to update its data. Since it's a static HTML
 
 ```json
 {
-  "id": "uuid",
-  "timestamp": "2026-03-28T14:32:00.000Z",
-  "contactName": "Marcus Webb",
-  "contactPhone": "(813) 555-0192",
-  "duration": 147,
+  "id": "string",
+  "timestamp": "ISO8601",
+  "contactName": "string",
+  "contactPhone": "string",
+  "contactId": "string",
+  "locationId": "string",
+  "clientName": "string",
+  "duration": 0,
   "direction": "inbound",
-  "callType": "LC Phone",
-  "transcript": "Full call transcript text...",
-  "summary": "Prospective client expressed interest in weekly lawn service.",
-  "category": "Lead",
-  "grade": "B",
+  "callType": "LC Phone | Voice AI | IVR",
+  "transcript": "string",
+  "summary": "string",
+  "grade": "A | B | C | D | F | -",
+  "category": "Lead | Existing Client | Bad Lead | Spam | Tire Kicker | Wrong Number | Missed Call",
+  "sentiment": "Positive | Neutral | Negative",
+  "missedOpportunity": false,
+  "missedCall": false,
+  "keyPhrases": [],
   "score": {
     "answered": true,
     "qualified": true,
@@ -160,67 +171,81 @@ The dashboard accepts POST requests to update its data. Since it's a static HTML
     "followUpPromised": true,
     "professionalTone": true
   },
-  "sentiment": "Positive",
-  "keyPhrases": ["ready to book", "asked about pricing"],
-  "missedOpportunity": false,
-  "locationId": "your-ghl-location-id",
-  "clientName": "Your Client Name"
+  "services": [],
+  "objections": [{ "content": "string", "category": "string", "response": "string" }],
+  "questions": [],
+  "competitors": [],
+  "compliments": []
 }
 ```
 
 ---
 
-## Production Setup
+## Dashboard Features
 
-For a multi-client, real-time production setup:
-
-1. **Add a lightweight backend** (Node/Express or a serverless function) to receive POST data and persist to a database instead of localStorage
-2. **Auth layer** — add a simple token check so only your n8n instance can write data
-3. **Per-client isolation** — filter by `locationId` to scope each client's view
-4. **Deploy on Vercel/Railway** for zero-ops hosting
-
----
-
-## Customization
-
-### Color Palette
-All colors are CSS custom properties at the top of `index.html`:
-```css
-:root {
-  --accent-amber: #d4956a;   /* Primary accent */
-  --accent-sage: #7a9e8a;    /* Grade A / Leads */
-  --grade-a through --grade-f /* Grade colors */
-}
-```
-
-### Grade Weights
-Modify the AI grading prompt in your n8n workflow to adjust what earns an A vs B.
-
-### Categories
-Add custom categories by extending the `CATEGORIES` array and adding matching CSS classes.
+- **KPI Cards** — Total calls, leads captured, grade distribution, missed opportunities, avg duration
+- **Grade Donut Chart** — A/B/C/D/F breakdown with warm color palette
+- **Category Bar Chart** — Call type distribution
+- **14-Day Volume Area Chart** — Call trends over time
+- **Sortable/Filterable Table** — Filter by grade, category, missed opportunity; search by name/phone
+- **Expandable Call Rows** — Full transcript, AI summary, score breakdown, key phrases, services, objections
+- **Missed Opportunity Flags** — Glowing red dot on leads with D/F grades
+- **CSV Export** — One-click filtered data export
+- **Webhook Simulator** — Test button injects realistic calls without GHL connected
 
 ---
 
 ## Roadmap
 
-- [ ] n8n workflow JSON export
-- [ ] Multi-client view (agency dashboard showing all sub-accounts)
-- [ ] Email/Slack alert when missed opportunity detected
-- [ ] Weekly digest email (top missed opps, grade trend)
-- [ ] Light mode
-- [ ] Per-agent performance tracking (which team member handled the call)
-- [ ] GHL contact auto-tagging based on grade
+### ✅ Current (v1 — March 2026)
+- Single-file dashboard with full call grading UI
+- GHL Transcript Generated trigger → n8n → Claude Haiku pipeline
+- Missed call tracking via separate GHL workflow
+- 9 intelligence categories (grades, sentiment, services, objections, questions, competitors, compliments)
+- Live at canopy.groundcontrol.agency
+
+### 📋 Next — Data Persistence
+- Supabase backend (replace localStorage)
+- Real-time multi-session sync
+- Per-client data isolation by locationId
+
+### 📋 Phase 3 — Multi-Client Agency View
+- Agency dashboard showing all sub-accounts
+- Cross-client objection/question trending
+- Client health scores
+- Weekly digest emails per client
+
+### 📋 Phase 4 — Client Portal
+- Client-facing login (clients see only their own data)
+- White-labeled reports
+- Client notification emails for missed opportunities
+
+### 📋 Phase 5 — Advanced Intelligence
+- Per-rep performance scorecards
+- Lost deal analysis
+- Seasonal trend tracking
+- Service area expansion signals
+- Pricing intelligence from call data
+- Training recommendations
+
+---
+
+## Previous Architecture (Deprecated)
+
+The original CallCanopy (repo: `call-intelligence`) was built as a full Next.js 16 + Supabase + Vercel app with:
+- GHL OAuth flow for sub-account connection
+- Deepgram nova-2 for call transcription
+- Full database schema (clients, communications, extracted_items tables)
+- GHL Marketplace app submission (Client ID: `69bb00239b7d03d5bd623b52-mmwgaasu`)
+
+This was simplified after GHL released native transcript generation via the Transcript Generated trigger, making Deepgram and OAuth unnecessary for our use case. The new architecture is faster, cheaper, and easier to maintain.
+
+The Supabase schema and database design from the original build will be used in Phase 3 when we add multi-client persistence.
 
 ---
 
 ## Built By
 
-[Lawn & Land Marketing](https://lawnandlandmarketing.com) — Digital marketing for lawn care and landscaping businesses.
+[Lawn & Land Marketing](https://lawnandlandmarketing.com) — Digital marketing for lawn care and landscaping businesses. Largo, Florida.
 
-Signal is built and maintained by the L&L automation team. If you're a lawn care business looking for done-for-you marketing, [get in touch](https://lawnandlandmarketing.com).
-
----
-
-## License
-
-MIT — use it, fork it, build on it.
+Internal AI assistant: Roshi 🐢
