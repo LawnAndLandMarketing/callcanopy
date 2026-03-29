@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal — Call Intelligence</title>
+<title>CallCanopy — Call Intelligence</title>
 <style>
   :root {
     --bg-base: #1a1714;
@@ -246,7 +246,7 @@
       <path d="M6 16 Q8 10 10 16 Q12 22 14 16 Q16 10 18 16 Q20 22 22 16 Q24 10 26 16" stroke="#d4956a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </svg>
     <div>
-      <div class="logo-text">Signal</div>
+      <div class="logo-text">CallCanopy</div>
       <div class="logo-sub">Call Intelligence Dashboard</div>
     </div>
   </div>
@@ -422,13 +422,13 @@ function seedData() {
 }
 
 // ─── State ──────────────────────────────────────────────────────────────────
-let calls = JSON.parse(localStorage.getItem('signal_calls') || 'null') || seedData();
+let calls = JSON.parse(localStorage.getItem('callcanopy_calls') || 'null') || seedData();
 let dateRange = 30;
 let sortField = 'timestamp';
 let sortDir = -1;
 let expandedId = null;
 
-function save() { localStorage.setItem('signal_calls', JSON.stringify(calls)); }
+function save() { localStorage.setItem('callcanopy_calls', JSON.stringify(calls)); }
 function filteredByDate() {
   if (dateRange >= 9999) return calls;
   const cutoff = Date.now() - dateRange * 86400000;

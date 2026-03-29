@@ -1,12 +1,12 @@
-# Signal — Call Intelligence Dashboard
+# CallCanopy — Call Intelligence Platform
 
 > A beautiful, self-hosted call grading dashboard for lawn care and home services businesses. Connects to GoHighLevel via webhooks to automatically grade, categorize, and analyze every inbound call.
 
-![Signal Dashboard](https://lawnlab.dev/signal/)
+![Signal Dashboard](https://canopy.groundcontrol.agency/)
 
 ## What It Does
 
-Signal turns raw call transcripts from GoHighLevel into actionable intelligence. Every call gets automatically:
+CallCanopy turns raw call transcripts from GoHighLevel into actionable intelligence. Every call gets automatically:
 
 - **Graded A–F** based on how well it was handled
 - **Categorized** as Lead, Existing Client, Bad Lead, Spam, Tire Kicker, or Wrong Number
@@ -15,7 +15,7 @@ Signal turns raw call transcripts from GoHighLevel into actionable intelligence.
 
 ## Live Demo
 
-👉 **[https://lawnlab.dev/signal/](https://lawnlab.dev/signal/)**
+👉 **[https://canopy.groundcontrol.agency/](https://canopy.groundcontrol.agency/)**
 
 Loaded with 25 realistic sample calls. Click any row to expand the full transcript, score breakdown, and key phrases.
 
@@ -72,7 +72,7 @@ Dashboard updates in real time
 **Option A — Drop a file anywhere:**
 ```bash
 # Just upload index.html to any web server
-scp index.html user@yourserver:/var/www/signal/index.html
+scp index.html user@yourserver:/var/www/callcanopy/index.html
 ```
 
 **Option B — SiteGround (SAE pattern):**
@@ -80,7 +80,7 @@ scp index.html user@yourserver:/var/www/signal/index.html
 ssh -i ~/.ssh/your_key -p 18765 user@yourhost \
   "mkdir -p ~/www/yourdomain.com/public_html/signal"
 scp -i ~/.ssh/your_key -P 18765 index.html \
-  user@yourhost:~/www/yourdomain.com/public_html/signal/index.html
+  user@yourhost:~/www/yourdomain.com/public_html/callcanopy/index.html
 ```
 
 ### 2. Configure GoHighLevel
