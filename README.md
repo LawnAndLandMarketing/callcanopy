@@ -197,23 +197,35 @@ F = Call mishandled, rude, or opportunity completely missed
 
 ## Roadmap
 
-### ✅ Current (v1 — March 2026)
-- Single-file dashboard with full call grading UI
-- GHL Transcript Generated trigger → n8n → Claude Haiku pipeline
+### ✅ Phase 1 — Foundation + Multi-Client Agency View (Complete — March 2026)
+- Full call grading pipeline: GHL → n8n → Claude Haiku → Supabase → Dashboard
 - Missed call tracking via separate GHL workflow
-- 9 intelligence categories (grades, sentiment, services, objections, questions, competitors, compliments)
+- 9 intelligence categories per call (grade, sentiment, services, objections, questions, competitors, compliments, key phrases, score breakdown)
+- **Agency View** — card grid showing all clients with call summary stats (total calls, leads, missed, top grade)
+- **Client View** — full dashboard filtered to a single sub-account
+- View toggle: Agency ↔ Client in header
+- Client selector dropdown (populated from Supabase `clients` table)
+- Drill-down: click an agency card → jumps to client view
+- Supabase backend (real-time, multi-client, auto-refreshes every 30s)
 - Live at canopy.groundcontrol.agency
 
-### 📋 Next — Data Persistence
-- Supabase backend (replace localStorage)
-- Real-time multi-session sync
-- Per-client data isolation by locationId
+### 📋 Phase 2 — Client Onboarding Flow
+- Per-client GHL workflow setup (locationId hardcoded per sub-account)
+- `clients` table in Supabase populated for all active L&L clients
+- Add/remove clients via simple Supabase insert
+- Unique shareable URL per client: `canopy.groundcontrol.agency?client=slug`
 
-### 📋 Phase 3 — Multi-Client Agency View
-- Agency dashboard showing all sub-accounts
-- Cross-client objection/question trending
-- Client health scores
-- Weekly digest emails per client
+### 📋 Phase 3 — Agency Intelligence
+- Cross-client objection trending (what objections are all clients hearing?)
+- Agency-wide lead conversion benchmarks
+- Client health scores (grading trend over time)
+- Weekly digest emails per client (top missed opps, grade distribution)
+
+### 📋 Phase 4 — Client Portal
+- Supabase Auth login (clients see only their own data)
+- White-labeled per-client subdomain option
+- Client notification emails for missed opportunities
+- Embeddable widget for client sites
 
 ### 📋 Phase 4 — Client Portal
 - Client-facing login (clients see only their own data)
