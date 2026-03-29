@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal — Call Intelligence</title>
+<style>
+  :root {
+    --bg-base: #1a1714;
+    --bg-card: #221f1b;
+    --bg-card-hover: #2a2621;
+    --bg-input: #2e2a25;
+    --border: #3d3830;
+    --border-light: #4a443c;
+    --text-primary: #f0ebe3;
+    --text-secondary: #a89f94;
+    --text-muted: #6b6459;
+    --accent-amber: #d4956a;
+    --accent-amber-light: #e8b48a;
+    --accent-sage: #7a9e8a;
+    --accent-sage-light: #9cbfad;
+    --accent-clay: #b5724a;
+    --accent-cream: #e8dfd0;
+    --grade-a: #7a9e8a;
+    --grade-b: #9cbfad;
+    --grade-c: #c9a96e;
+    --grade-d: #c4845a;
+    --grade-f: #b05040;
+    --cat-lead: #7a9e8a;
+    --cat-existing: #8a9eb5;
+    --cat-bad: #c4845a;
+    --cat-spam: #a08070;
+    --cat-tire: #c9a96e;
+    --cat-wrong: #7a7070;
+    --shadow: 0 2px 12px rgba(0,0,0,0.4);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; }
+  .logo-text { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent-cream); }
+  .logo-sub { font-size: 12px; color: var(--text-muted); margin-top: -2px; }
+  .header-controls { display: flex; align-items: center; gap: 12px; }
+  .date-filter { display: flex; gap: 4px; background: var(--bg-input); border-radius: var(--radius-sm); padding: 4px; }
+  .date-btn {
+    padding: 6px 14px; border: none; background: none; color: var(--text-secondary);
+    border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.15s;
+  }
+  .date-btn.active { background: var(--border-light); color: var(--text-primary); }
+  .date-btn:hover:not(.active) { color: var(--text-primary); }
+  /* Main */
+  .main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px; transition: border-color 0.15s;
+  }
+  .kpi-card:hover { border-color: var(--border-light); }
+  .kpi-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -1px; }
+  .kpi-sub { font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .trend-up { color: var(--grade-a); }
+  .trend-down { color: var(--grade-f); }
+  .grade-mini-bar { display: flex; gap: 3px; margin-top: 8px; }
+  .grade-mini-seg { height: 6px; border-radius: 3px; flex: 1; opacity: 0.85; }
+  /* Charts Row */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 16px; margin-bottom: 28px; }
+  .chart-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+  /* Donut Chart */
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut-canvas { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { color: var(--text-secondary); }
+  .legend-val { margin-left: auto; font-weight: 600; color: var(--text-primary); }
+  /* Bar Chart */
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-label { font-size: 12px; color: var(--text-secondary); width: 90px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--bg-input); border-radius: 3px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .bar-count { font-size: 12px; color: var(--text-secondary); width: 28px; text-align: right; }
+  /* Area Chart */
+  .area-canvas { width: 100%; }
+  /* Filters */
+  .filters-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .search-input {
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); padding: 8px 14px; font-size: 13px; width: 240px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent-amber); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .filter-select {
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-secondary); padding: 8px 12px; font-size: 13px; cursor: pointer; outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: var(--accent-amber); }
+  .filter-select option { background: var(--bg-card); }
+  .btn-primary {
+    background: var(--accent-amber); color: #1a1714; border: none; border-radius: var(--radius-sm);
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:hover { background: var(--accent-amber-light); }
+  .btn-ghost {
+    background: none; border: 1px solid var(--border); color: var(--text-secondary);
+    border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--accent-amber); color: var(--text-primary); }
+  /* Table */
+  .table-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .table-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .table-count { font-size: 12px; color: var(--text-muted); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+    white-space: nowrap;
+  }
+  thead th:hover { color: var(--text-secondary); }
+  thead th.sorted { color: var(--accent-amber); }
+  tbody tr {
+    border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-card-hover); }
+  tbody tr.expanded { background: var(--bg-card-hover); }
+  td { padding: 13px 16px; font-size: 13px; vertical-align: middle; }
+  .td-date { color: var(--text-secondary); white-space: nowrap; font-size: 12px; }
+  .td-contact { font-weight: 500; }
+  .td-phone { font-size: 12px; color: var(--text-secondary); }
+  .td-duration { color: var(--text-secondary); font-size: 12px; }
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .badge-a { background: rgba(122,158,138,0.2); color: var(--grade-a); }
+  .badge-b { background: rgba(156,191,173,0.2); color: var(--grade-b); }
+  .badge-c { background: rgba(201,169,110,0.2); color: var(--grade-c); }
+  .badge-d { background: rgba(196,132,90,0.2); color: var(--grade-d); }
+  .badge-f { background: rgba(176,80,64,0.2); color: var(--grade-f); }
+  .cat-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .cat-Lead { background: rgba(122,158,138,0.15); color: var(--cat-lead); }
+  .cat-Existing { background: rgba(138,158,181,0.15); color: var(--cat-existing); }
+  .cat-Bad { background: rgba(196,132,90,0.15); color: var(--cat-bad); }
+  .cat-Spam { background: rgba(160,128,112,0.15); color: var(--cat-spam); }
+  .cat-Tire { background: rgba(201,169,110,0.15); color: var(--cat-tire); }
+  .cat-Wrong { background: rgba(122,112,112,0.15); color: var(--cat-wrong); }
+  .sent-badge { font-size: 12px; }
+  .sent-Positive { color: var(--grade-a); }
+  .sent-Neutral { color: var(--text-secondary); }
+  .sent-Negative { color: var(--grade-f); }
+  .missed-dot { width: 7px; height: 7px; border-radius: 50%; background: #b05040; display: inline-block; margin-right: 4px; box-shadow: 0 0 6px rgba(176,80,64,0.6); }
+  /* Expand Row */
+  .expand-row td { padding: 0; }
+  .expand-content {
+    padding: 20px 24px; background: var(--bg-base);
+    border-top: 1px solid var(--border);
+  }
+  .expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .expand-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .score-list { display: flex; flex-direction: column; gap: 6px; }
+  .score-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .score-check { color: var(--grade-a); }
+  .score-x { color: var(--grade-f); }
+  .transcript-box {
+    background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px; font-size: 12px; color: var(--text-secondary); line-height: 1.7;
+    max-height: 140px; overflow-y: auto;
+  }
+  .phrase-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .phrase-tag {
+    background: rgba(212,149,106,0.12); border: 1px solid rgba(212,149,106,0.25);
+    color: var(--accent-amber); border-radius: 4px; padding: 3px 9px; font-size: 11px;
+  }
+  .summary-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-top: 6px; }
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--bg-card);
+    border: 1px solid var(--accent-amber); border-radius: var(--radius);
+    padding: 14px 20px; font-size: 13px; color: var(--text-primary);
+    box-shadow: var(--shadow); z-index: 1000; transform: translateY(0);
+    transition: all 0.3s; display: flex; align-items: center; gap: 10px;
+  }
+  .toast.hidden { transform: translateY(20px); opacity: 0; pointer-events: none; }
+  /* Empty state */
+  .empty-state { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-base); }
+  ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .header { padding: 14px 16px; }
+  }
+  .sort-arrow { opacity: 0.4; font-size: 10px; margin-left: 3px; }
+  th.sorted .sort-arrow { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="rgba(212,149,106,0.15)"/>
+      <path d="M6 16 Q8 10 10 16 Q12 22 14 16 Q16 10 18 16 Q20 22 22 16 Q24 10 26 16" stroke="#d4956a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <div>
+      <div class="logo-text">Signal</div>
+      <div class="logo-sub">Call Intelligence Dashboard</div>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="date-filter">
+      <button class="date-btn" onclick="setDateRange(7, this)">7d</button>
+      <button class="date-btn active" onclick="setDateRange(30, this)">30d</button>
+      <button class="date-btn" onclick="setDateRange(9999, this)">All</button>
+    </div>
+    <button class="btn-ghost" onclick="injectTestCall()">⚡ Test Webhook</button>
+    <button class="btn-primary" onclick="exportCSV()">↓ Export</button>
+  </div>
+</header>
+
+<main class="main">
+  <!-- KPI Row -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Grade Distribution</div>
+      <div class="donut-wrap">
+        <canvas class="donut-canvas" id="donutCanvas" width="110" height="110"></canvas>
+        <div class="donut-legend" id="donutLegend"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Call Categories</div>
+      <div class="bar-chart" id="barChart"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Call Volume — Last 14 Days</div>
+      <canvas class="area-canvas" id="areaCanvas" height="120"></canvas>
+    </div>
+  </div>
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <span class="table-title">All Calls</span>
+        <span class="table-count" id="tableCount"></span>
+      </div>
+      <div class="filters-row" style="margin:0">
+        <input class="search-input" id="searchInput" placeholder="Search contact, phone..." oninput="renderTable()">
+        <select class="filter-select" id="filterGrade" onchange="renderTable()">
+          <option value="">All Grades</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option><option>F</option>
+        </select>
+        <select class="filter-select" id="filterCategory" onchange="renderTable()">
+          <option value="">All Categories</option>
+          <option>Lead</option><option>Existing Client</option><option>Bad Lead</option>
+          <option>Spam</option><option>Tire Kicker</option><option>Wrong Number</option>
+        </select>
+        <select class="filter-select" id="filterMissed" onchange="renderTable()">
+          <option value="">All Calls</option>
+          <option value="1">Missed Opps Only</option>
+        </select>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('timestamp')" id="th-timestamp">Date <span class="sort-arrow">↕</span></th>
+          <th>Contact</th>
+          <th onclick="sortBy('duration')" id="th-duration">Duration <span class="sort-arrow">↕</span></th>
+          <th>Type</th>
+          <th onclick="sortBy('category')" id="th-category">Category <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('grade')" id="th-grade">Grade <span class="sort-arrow">↕</span></th>
+          <th>Sentiment</th>
+          <th>Flags</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="empty-state" style="display:none">No calls match your filters.</div>
+  </div>
+</main>
+
+<div class="toast hidden" id="toast">
+  <span>✓</span><span id="toastMsg"></span>
+</div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────────────────
+
+const TRANSCRIPTS = [
+  "Hi, I'm calling about getting my lawn mowed. I have about half an acre and I'm looking for weekly service. What are your rates? ... Yeah that sounds reasonable, can we schedule a quote?",
+  "This is Mike from Greenview Properties. We need full landscaping for three commercial sites. When can someone come out to assess?",
+  "Hi do you guys do Christmas lights? My neighbor uses you and said you're great. I want the whole package — gutters, roof, trees.",
+  "Hello? Can you hear me? I'm calling about... yeah the lawn. It's been like three weeks. Nobody's come. This is unacceptable. I want to talk to a manager.",
+  "Hi is this the pizza place? I think I have the wrong number, sorry about that.",
+  "Yeah I got your flyer. How much do you charge? ... That's way too expensive. I can get it done for half that. Thanks anyway.",
+  "Hi this is Dave calling about the estimate I got last week. I'm ready to move forward. When can we get started?",
+  "I'm interested in your fertilization program. My grass is looking pretty rough. Do you do a soil test first? What kind of products do you use?",
+  "Um, just wanted to know if you do one-time cleanups? I don't need regular service. Just need the yard cleaned up before my daughter's wedding.",
+  "Calling to reschedule my Thursday appointment. Something came up. Can we do Friday afternoon instead?",
+  "Hi, we're a property management company and we manage about 40 residential units. We're looking for a lawn care vendor. Do you do commercial contracts?",
+  "Do you handle irrigation systems? We've got a broken head and the whole zone isn't working. Need it fixed before summer.",
+  "This is Sarah. I've been a customer for two years. I'm moving to a new house and want to transfer my service. What do I need to do?",
+  "You guys left a huge rut in my lawn last week. I took pictures. I want this fixed or I'm disputing the charge.",
+  "Hi I saw your ad online. Do you service the Lakewood area? We just moved and need everything — mowing, edging, trimming. Looking for a quote.",
+  "Yeah whatever, just calling because you keep sending me emails. I don't have a lawn. Stop calling me.",
+  "Hi I'm interested in your premium lawn care package. I saw it on your website. Can you walk me through what's included?",
+  "We need an emergency service. Our HOA is threatening a fine. The grass is way overgrown. Can anyone come today or tomorrow?",
+  "I'm calling for a price check. How much for a quarter acre lot? I'm comparing a few companies.",
+  "This is Tom. I just want to cancel my service. It's nothing personal, we're selling the house.",",
+  "Hi, I think someone from your company just knocked on my door. I'm not interested but wanted to make sure it's not a scam.",
+  "Hey we need the back area cleared out. There's brush, weeds, the whole thing. Been neglected for like two years. Can you handle that?",
+  "Just calling to say the crew did an amazing job yesterday. Best my lawn has looked in years. Tell them thank you from me.",
+  "I need a quote for spring cleanup. Aeration, overseeding, the whole nine yards. What's your availability looking like?",
+  "Hi, do you offer senior discounts? I'm on a fixed income and looking for affordable lawn care."
+];
+
+const NAMES = [
+  "Marcus Webb","Linda Cortez","James Harrington","Sandra Bishop","Tom Nguyen",
+  "Karen Mills","Derek Foster","Amy Chen","Bob Kowalski","Rachel Torres",
+  "Paul Simmons","Diana Grant","Chris Walton","Jennifer Holt","Steve Murdoch",
+  "Brenda Lawson","Gary Okonkwo","Michelle Park","Frank Deluca","Lisa Brennan",
+  "Nathan Cole","Patricia Yuen","Kevin Marsh","Angela Scott","Doug Pittman"
+];
+const PHONES = () => `(${Math.floor(Math.random()*800+100)}) ${Math.floor(Math.random()*900+100)}-${Math.floor(Math.random()*9000+1000)}`;
+const GRADES = ['A','A','B','B','B','C','C','C','D','F'];
+const CATEGORIES = ['Lead','Lead','Lead','Lead','Existing Client','Bad Lead','Spam','Tire Kicker','Tire Kicker','Wrong Number'];
+const SENTIMENTS = ['Positive','Positive','Neutral','Neutral','Negative'];
+const CALL_TYPES = ['LC Phone','Voice AI','IVR','LC Phone','LC Phone'];
+const KEY_PHRASES_POOL = ['ready to book','asked about pricing','mentioned competitor','urgency expressed','asked for manager','scheduling request','interested in package','referral from neighbor','complaint raised','cancellation intent','price sensitive','commercial inquiry'];
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0, v = c=='x'?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+
+function seedData() {
+  const calls = [];
+  const now = Date.now();
+  for (let i = 0; i < 25; i++) {
+    const grade = GRADES[Math.floor(Math.random()*GRADES.length)];
+    const category = i < 12 ? 'Lead' : CATEGORIES[Math.floor(Math.random()*CATEGORIES.length)];
+    const transcript = TRANSCRIPTS[i % TRANSCRIPTS.length];
+    const phrases = KEY_PHRASES_POOL.sort(()=>Math.random()-0.5).slice(0,Math.floor(Math.random()*3)+1);
+    const missedOpportunity = category === 'Lead' && (grade === 'D' || grade === 'F');
+    const daysAgo = Math.floor(Math.random()*30);
+    const ts = new Date(now - daysAgo * 86400000 - Math.random()*43200000);
+    calls.push({
+      id: uuid(),
+      timestamp: ts.toISOString(),
+      contactName: NAMES[i],
+      contactPhone: PHONES(),
+      duration: Math.floor(Math.random()*280 + 20),
+      direction: Math.random() > 0.1 ? 'inbound' : 'outbound',
+      callType: CALL_TYPES[Math.floor(Math.random()*CALL_TYPES.length)],
+      transcript,
+      summary: `${category === 'Lead' ? 'Prospective client' : 'Caller'} ${NAMES[i].split(' ')[0]} ${category==='Lead'?'expressed interest in lawn care services and requested pricing information.':'called regarding existing account or general inquiry.'}`,
+      category,
+      grade,
+      score: {
+        answered: Math.random() > 0.15,
+        qualified: grade === 'A' || grade === 'B',
+        appointmentBooked: grade === 'A',
+        followUpPromised: grade === 'A' || grade === 'B' || grade === 'C',
+        professionalTone: grade !== 'F'
+      },
+      sentiment: SENTIMENTS[Math.floor(Math.random()*SENTIMENTS.length)],
+      keyPhrases: phrases,
+      missedOpportunity,
+      locationId: 'pit-268c978f-1fa4-4b82-b0e1-86cba582db33',
+      clientName: 'Lawn & Land Sub-Account'
+    });
+  }
+  return calls.sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
+}
+
+// ─── State ──────────────────────────────────────────────────────────────────
+let calls = JSON.parse(localStorage.getItem('signal_calls') || 'null') || seedData();
+let dateRange = 30;
+let sortField = 'timestamp';
+let sortDir = -1;
+let expandedId = null;
+
+function save() { localStorage.setItem('signal_calls', JSON.stringify(calls)); }
+function filteredByDate() {
+  if (dateRange >= 9999) return calls;
+  const cutoff = Date.now() - dateRange * 86400000;
+  return calls.filter(c => new Date(c.timestamp).getTime() > cutoff);
+}
+
+// ─── KPI ────────────────────────────────────────────────────────────────────
+function renderKPI() {
+  const data = filteredByDate();
+  const leads = data.filter(c=>c.category==='Lead');
+  const missed = data.filter(c=>c.missedOpportunity);
+  const avgDur = data.length ? Math.round(data.reduce((s,c)=>s+c.duration,0)/data.length) : 0;
+  const gradeCounts = {A:0,B:0,C:0,D:0,F:0};
+  data.forEach(c=>gradeCounts[c.grade]++);
+  const gradeTotal = data.length || 1;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Total Calls</div>
+      <div class="kpi-value">${data.length}</div>
+      <div class="kpi-sub"><span class="trend-up">↑</span> Last ${dateRange >= 9999 ? 'all time' : dateRange+'d'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Leads Captured</div>
+      <div class="kpi-value" style="color:var(--grade-a)">${leads.length}</div>
+      <div class="kpi-sub">${data.length ? Math.round(leads.length/data.length*100) : 0}% of calls</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Grade Distribution</div>
+      <div class="kpi-value" style="font-size:18px;letter-spacing:2px">
+        ${Object.entries(gradeCounts).map(([g,n])=>`<span style="color:var(--grade-${g.toLowerCase()})">${g}</span>`).join(' ')}
+      </div>
+      <div class="grade-mini-bar">
+        ${Object.entries(gradeCounts).map(([g,n])=>`<div class="grade-mini-seg" style="background:var(--grade-${g.toLowerCase()});flex:${n+0.5}"></div>`).join('')}
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Missed Opportunities</div>
+      <div class="kpi-value" style="color:var(--grade-f)">${missed.length}</div>
+      <div class="kpi-sub">Leads with D/F grade</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Avg Duration</div>
+      <div class="kpi-value">${Math.floor(avgDur/60)}:${(avgDur%60).toString().padStart(2,'0')}</div>
+      <div class="kpi-sub">minutes per call</div>
+    </div>
+  `;
+}
+
+// ─── Charts ─────────────────────────────────────────────────────────────────
+function renderDonut() {
+  const data = filteredByDate();
+  const counts = {A:0,B:0,C:0,D:0,F:0};
+  data.forEach(c=>counts[c.grade]++);
+  const colors = {A:'#7a9e8a',B:'#9cbfad',C:'#c9a96e',D:'#c4845a',F:'#b05040'};
+  const total = data.length || 1;
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,110,110);
+  let angle = -Math.PI/2;
+  const cx=55, cy=55, r=42, inner=26;
+  Object.entries(counts).forEach(([g,n]) => {
+    if (!n) return;
+    const slice = (n/total)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(angle)*r, cy+Math.sin(angle)*r);
+    ctx.arc(cx,cy,r,angle,angle+slice);
+    ctx.arc(cx,cy,inner,angle+slice,angle,true);
+    ctx.closePath();
+    ctx.fillStyle = colors[g];
+    ctx.fill();
+    angle += slice;
+  });
+  // Center text
+  ctx.fillStyle = '#f0ebe3';
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(total, cx, cy-7);
+  ctx.fillStyle = '#6b6459';
+  ctx.font = '10px system-ui';
+  ctx.fillText('calls', cx, cy+8);
+
+  document.getElementById('donutLegend').innerHTML = Object.entries(counts).map(([g,n])=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[g]}"></div>
+      <span class="legend-label">Grade ${g}</span>
+      <span class="legend-val" style="color:${colors[g]}">${n}</span>
+    </div>
+  `).join('');
+}
+
+function renderBarChart() {
+  const data = filteredByDate();
+  const cats = {Lead:0,'Existing Client':0,'Bad Lead':0,Spam:0,'Tire Kicker':0,'Wrong Number':0};
+  data.forEach(c=>{
+    if (cats[c.category]!==undefined) cats[c.category]++;
+  });
+  const colors = {Lead:'var(--cat-lead)','Existing Client':'var(--cat-existing)','Bad Lead':'var(--cat-bad)',Spam:'var(--cat-spam)','Tire Kicker':'var(--cat-tire)','Wrong Number':'var(--cat-wrong)'};
+  const max = Math.max(...Object.values(cats), 1);
+  document.getElementById('barChart').innerHTML = Object.entries(cats).map(([cat,n])=>`
+    <div class="bar-row">
+      <div class="bar-label">${cat}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${n/max*100}%;background:${colors[cat]}"></div></div>
+      <div class="bar-count">${n}</div>
+    </div>
+  `).join('');
+}
+
+function renderAreaChart() {
+  const canvas = document.getElementById('areaCanvas');
+  const W = canvas.offsetWidth || 500, H = 120;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Build last 14 days
+  const days = [];
+  for (let i=13; i>=0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    days.push(d);
+  }
+  const counts = days.map(d => {
+    const next = new Date(d); next.setDate(next.getDate()+1);
+    return calls.filter(c => {
+      const t = new Date(c.timestamp);
+      return t >= d && t < next;
+    }).length;
+  });
+  const maxVal = Math.max(...counts, 1);
+  const padT=10, padB=20, padL=10, padR=10;
+  const w = W-padL-padR, h = H-padT-padB;
+  const xStep = w/(days.length-1);
+
+  // Grid lines
+  ctx.strokeStyle = '#3d3830';
+  ctx.lineWidth = 1;
+  [0,.5,1].forEach(f => {
+    const y = padT + h*(1-f);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+  });
+
+  // Area fill
+  const pts = counts.map((v,i)=>({x:padL+i*xStep, y:padT+h*(1-v/maxVal)}));
+  const grad = ctx.createLinearGradient(0,padT,0,H);
+  grad.addColorStop(0,'rgba(212,149,106,0.3)');
+  grad.addColorStop(1,'rgba(212,149,106,0.0)');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H-padB);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x, H-padB);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle = '#d4956a';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Dots
+  pts.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,3,0,Math.PI*2);
+    ctx.fillStyle = '#d4956a';
+    ctx.fill();
+  });
+
+  // Day labels (every other)
+  ctx.fillStyle = '#6b6459';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  days.forEach((d,i)=>{
+    if (i%3===0) {
+      ctx.fillText(`${d.getMonth()+1}/${d.getDate()}`, padL+i*xStep, H-4);
+    }
+  });
+}
+
+// ─── Table ───────────────────────────────────────────────────────────────────
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const gFilter = document.getElementById('filterGrade').value;
+  const cFilter = document.getElementById('filterCategory').value;
+  const mFilter = document.getElementById('filterMissed').value;
+
+  let data = filteredByDate().filter(c => {
+    if (search && !c.contactName.toLowerCase().includes(search) && !c.contactPhone.includes(search)) return false;
+    if (gFilter && c.grade !== gFilter) return false;
+    if (cFilter && c.category !== cFilter) return false;
+    if (mFilter === '1' && !c.missedOpportunity) return false;
+    return true;
+  });
+
+  data.sort((a,b) => {
+    const av = a[sortField], bv = b[sortField];
+    return av < bv ? sortDir : av > bv ? -sortDir : 0;
+  });
+
+  document.getElementById('tableCount').textContent = ` — ${data.length} calls`;
+  const body = document.getElementById('tableBody');
+  document.getElementById('emptyState').style.display = data.length ? 'none' : 'block';
+
+  body.innerHTML = data.map(c => {
+    const dt = new Date(c.timestamp);
+    const dateStr = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+    const dur = `${Math.floor(c.duration/60)}:${(c.duration%60).toString().padStart(2,'0')}`;
+    const catKey = c.category.split(' ')[0];
+    const isExpanded = expandedId === c.id;
+    const expandRow = isExpanded ? `
+      <tr class="expand-row">
+        <td colspan="8">
+          <div class="expand-content">
+            <div class="expand-grid">
+              <div>
+                <div class="expand-section-title">Transcript</div>
+                <div class="transcript-box">${c.transcript}</div>
+                <div style="margin-top:12px">
+                  <div class="expand-section-title">AI Summary</div>
+                  <div class="summary-text">${c.summary}</div>
+                </div>
+                <div style="margin-top:12px">
+                  <div class="expand-section-title">Key Phrases</div>
+                  <div class="phrase-tags">${c.keyPhrases.map(p=>`<span class="phrase-tag">${p}</span>`).join('')}</div>
+                </div>
+              </div>
+              <div>
+                <div class="expand-section-title">Score Breakdown</div>
+                <div class="score-list">
+                  ${[
+                    ['Call Answered', c.score.answered],
+                    ['Lead Qualified', c.score.qualified],
+                    ['Appointment Booked', c.score.appointmentBooked],
+                    ['Follow-Up Promised', c.score.followUpPromised],
+                    ['Professional Tone', c.score.professionalTone]
+                  ].map(([label,val])=>`
+                    <div class="score-item">
+                      <span class="${val?'score-check':'score-x'}">${val?'✓':'✗'}</span>
+                      <span style="color:var(--text-secondary)">${label}</span>
+                    </div>
+                  `).join('')}
+                </div>
+                <div style="margin-top:16px">
+                  <div class="expand-section-title">Details</div>
+                  <div style="font-size:12px;color:var(--text-secondary);line-height:2">
+                    Type: ${c.callType}<br>
+                    Direction: ${c.direction}<br>
+                    Duration: ${dur}<br>
+                    Client: ${c.clientName}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    ` : '';
+    return `
+      <tr onclick="toggleExpand('${c.id}')" ${isExpanded?'class="expanded"':''}>
+        <td class="td-date">${dateStr}</td>
+        <td>
+          <div class="td-contact">${c.contactName}</div>
+          <div class="td-phone">${c.contactPhone}</div>
+        </td>
+        <td class="td-duration">${dur}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${c.callType}</td>
+        <td><span class="cat-badge cat-${catKey}">${c.category}</span></td>
+        <td><span class="badge badge-${c.grade.toLowerCase()}">${c.grade}</span></td>
+        <td><span class="sent-badge sent-${c.sentiment}">${c.sentiment === 'Positive' ? '😊' : c.sentiment === 'Negative' ? '😤' : '😐'} ${c.sentiment}</span></td>
+        <td>${c.missedOpportunity ? '<span title="Missed Opportunity"><span class="missed-dot"></span>Missed</span>' : ''}</td>
+      </tr>
+      ${expandRow}
+    `;
+  }).join('');
+}
+
+function toggleExpand(id) {
+  expandedId = expandedId === id ? null : id;
+  renderTable();
+}
+
+// ─── Sort ────────────────────────────────────────────────────────────────────
+function sortBy(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = -1; }
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  const th = document.getElementById('th-'+field);
+  if (th) th.classList.add('sorted');
+  renderTable();
+}
+
+// ─── Date Range ──────────────────────────────────────────────────────────────
+function setDateRange(days, btn) {
+  dateRange = days;
+  document.querySelectorAll('.date-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ─── Test Webhook ────────────────────────────────────────────────────────────
+const TEST_NAMES = ["Ryan Blackwell","Stephanie Larson","Omar Hussain","Cynthia Park","Brian Donnelly"];
+function injectTestCall() {
+  const grade = GRADES[Math.floor(Math.random()*GRADES.length)];
+  const category = Math.random() > 0.4 ? 'Lead' : CATEGORIES[Math.floor(Math.random()*CATEGORIES.length)];
+  const phrases = KEY_PHRASES_POOL.sort(()=>Math.random()-0.5).slice(0,2);
+  const name = TEST_NAMES[Math.floor(Math.random()*TEST_NAMES.length)];
+  const call = {
+    id: uuid(),
+    timestamp: new Date().toISOString(),
+    contactName: name,
+    contactPhone: PHONES(),
+    duration: Math.floor(Math.random()*200+30),
+    direction: 'inbound',
+    callType: 'LC Phone',
+    transcript: TRANSCRIPTS[Math.floor(Math.random()*TRANSCRIPTS.length)],
+    summary: `New inbound call from ${name} regarding lawn care services.`,
+    category,
+    grade,
+    score: {
+      answered: true,
+      qualified: grade === 'A' || grade === 'B',
+      appointmentBooked: grade === 'A',
+      followUpPromised: grade !== 'F',
+      professionalTone: grade !== 'F'
+    },
+    sentiment: SENTIMENTS[Math.floor(Math.random()*SENTIMENTS.length)],
+    keyPhrases: phrases,
+    missedOpportunity: category === 'Lead' && (grade === 'D' || grade === 'F'),
+    locationId: 'pit-268c978f-1fa4-4b82-b0e1-86cba582db33',
+    clientName: 'Lawn & Land Sub-Account'
+  };
+  calls.unshift(call);
+  save();
+  showToast(`New call received — ${name} · Grade ${grade} · ${category}`);
+  renderAll();
+}
+
+// ─── Export ──────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const data = filteredByDate();
+  const headers = ['Date','Contact','Phone','Duration','Type','Category','Grade','Sentiment','Missed Opportunity','Summary'];
+  const rows = data.map(c=>[
+    new Date(c.timestamp).toLocaleString(),
+    c.contactName, c.contactPhone,
+    `${Math.floor(c.duration/60)}:${(c.duration%60).toString().padStart(2,'0')}`,
+    c.callType, c.category, c.grade, c.sentiment,
+    c.missedOpportunity?'Yes':'No', `"${c.summary.replace(/"/g,'""')}"`
+  ]);
+  const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `signal-calls-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.add('hidden'), 3500);
+}
+
+// ─── Render All ──────────────────────────────────────────────────────────────
+function renderAll() {
+  renderKPI();
+  renderDonut();
+  renderBarChart();
+  renderAreaChart();
+  renderTable();
+}
+
+window.addEventListener('resize', renderAreaChart);
+renderAll();
+</script>
+</body>
+</html>
