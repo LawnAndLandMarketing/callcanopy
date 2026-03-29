@@ -2,7 +2,7 @@
 
 > A beautiful, self-hosted call grading dashboard for lawn care and home services businesses. Connects to GoHighLevel via webhooks to automatically grade, categorize, and analyze every inbound call.
 
-![Signal Dashboard](https://serviceareaexpert.com/signal/)
+![Signal Dashboard](https://lawnlab.dev/signal/)
 
 ## What It Does
 
@@ -15,7 +15,7 @@ Signal turns raw call transcripts from GoHighLevel into actionable intelligence.
 
 ## Live Demo
 
-👉 **[https://serviceareaexpert.com/signal/](https://serviceareaexpert.com/signal/)**
+👉 **[https://lawnlab.dev/signal/](https://lawnlab.dev/signal/)**
 
 Loaded with 25 realistic sample calls. Click any row to expand the full transcript, score breakdown, and key phrases.
 
