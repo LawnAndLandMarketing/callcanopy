@@ -248,7 +248,7 @@ The original CallCanopy (repo: `call-intelligence`) was built as a full Next.js 
 - GHL OAuth flow for sub-account connection
 - Deepgram nova-2 for call transcription
 - Full database schema (clients, communications, extracted_items tables)
-- GHL Marketplace app submission (Client ID: `69bb00239b7d03d5bd623b52-mmwgaasu`)
+- GHL Marketplace app submission (deprecated — no longer needed)
 
 This was simplified after GHL released native transcript generation via the Transcript Generated trigger, making Deepgram and OAuth unnecessary for our use case. The new architecture is faster, cheaper, and easier to maintain.
 
